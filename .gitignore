@@ -22,4 +22,5 @@ __pycache__
 pybind11/
 .DS_Store
 venv/
-fpie_env
+fpie_env/
+results/
