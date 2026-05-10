@@ -1,10 +1,7 @@
 # Poisson Image Editing - A Parallel Implementation - Adding Block Red Black and MultiSweeps RedBlack Solver
 
-[![PyPI](https://img.shields.io/pypi/v/fpie)](https://pypi.org/project/fpie/)
-[![Docs](https://readthedocs.org/projects/fpie/badge/?version=main)](https://fpie.readthedocs.io)
-[![Test](https://github.com/Trinkle23897/Fast-Poisson-Image-Editing/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Trinkle23897/Fast-Poisson-Image-Editing/actions/workflows/test.yml)
 
-> Original: Jiayi Weng (jiayiwen), Zixu Chen (zixuc)
+> Original: Jiayi Weng (jiayiwen), Zixu Chen (zixuc)<br>
 > Forked by Menahil Ahmad (23I-0546) and Fatima Sohail (23I-0633) for our Parallel & Distributed Computing Course
 
 [Poisson Image Editing](https://www.cs.jhu.edu/~misha/Fall07/Papers/Perez03.pdf) is a technique that can fuse two images together without producing artifacts. Given a source image and its corresponding mask, as well as a coordination on the target image, the algorithm always yields amazing result.
@@ -88,19 +85,15 @@ Brb and MsrbSolvers are also supported in GUI
 
 ### Backend and Solver
 
-Original: We have provided 7 backends. Each backend has two solvers: EquSolver and GridSolver. You can find the difference between these two solvers in the next section.
-
-Additionally this fork implements OpenMP BrbSolver and MsrbSolver
-
-For different backend usage, please check out the related documentation [here](https://fpie.readthedocs.io/en/main/backend.html).
+We extend upon EquSolver and GridSolver and add:
+* BrbSolver
+* MsrbSolver
 
 For other usage, please run `fpie -h` or `fpie-gui -h` to see the hint.
 
 ## Benchmark Result
 
 ### Original Authors:
-![](https://fpie.readthedocs.io/en/main/_images/benchmark.png)
-
 See [benchmark result](https://fpie.readthedocs.io/en/main/benchmark.html) and [report](https://fpie.readthedocs.io/en/main/report.html#result-and-analysis).
 
 ### Brb & Msrb
@@ -125,12 +118,16 @@ If the GridSolver's parameter is carefully tuned (`--grid-x` and `--grid-y`), it
 
 ## BrbSolver
 
+Usage: `--method {brb}`
+
 e.g.
 ```
 fpie -s test2_src.png -m test2_mask.png -t test2_tgt.png -o result2.jpg -h1 130 -w1 130 -n 11000 -g src -b openmp --method brb --tile 8 -c 6
 ```
 
 ## MsrbSolver
+
+Usage: `--method {msrb}`
 
 e.g.
 ```
