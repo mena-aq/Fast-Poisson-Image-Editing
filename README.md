@@ -1,10 +1,11 @@
-# Poisson Image Editing - A Parallel Implementation
+# Poisson Image Editing - A Parallel Implementation - Adding Block Red Black and MultiSweeps RedBlack Solver
 
 [![PyPI](https://img.shields.io/pypi/v/fpie)](https://pypi.org/project/fpie/)
 [![Docs](https://readthedocs.org/projects/fpie/badge/?version=main)](https://fpie.readthedocs.io)
 [![Test](https://github.com/Trinkle23897/Fast-Poisson-Image-Editing/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Trinkle23897/Fast-Poisson-Image-Editing/actions/workflows/test.yml)
 
-> Jiayi Weng (jiayiwen), Zixu Chen (zixuc)
+> Original: Jiayi Weng (jiayiwen), Zixu Chen (zixuc)
+> Forked by Menahil Ahmad (23I-0546) and Fatima Sohail (23I-0633) for our Parallel & Distributed Computing Course
 
 [Poisson Image Editing](https://www.cs.jhu.edu/~misha/Fall07/Papers/Perez03.pdf) is a technique that can fuse two images together without producing artifacts. Given a source image and its corresponding mask, as well as a coordination on the target image, the algorithm always yields amazing result.
 
@@ -80,17 +81,16 @@ Here are the results:
 
 ### GUI
 
-```bash
-$ fpie-gui -s test3_src.jpg -t test3_tgt.jpg -o result.jpg -b cuda -n 10000
-```
+Brb and MsrbSolvers are also supported in GUI
 
 ![](https://fpie.readthedocs.io/en/main/_images/gui.png)
 
-We provide a simple GUI for real-time seamless cloning. You need to use your mouse to draw a rectangle on top of the source image, and click a point in target image. After that the result will automatically be generated. In the end, you can press ESC to terminate the program.
 
 ### Backend and Solver
 
-We have provided 7 backends. Each backend has two solvers: EquSolver and GridSolver. You can find the difference between these two solvers in the next section.
+Original: We have provided 7 backends. Each backend has two solvers: EquSolver and GridSolver. You can find the difference between these two solvers in the next section.
+
+Additionally this fork implements OpenMP BrbSolver and MsrbSolver
 
 For different backend usage, please check out the related documentation [here](https://fpie.readthedocs.io/en/main/backend.html).
 
@@ -98,23 +98,20 @@ For other usage, please run `fpie -h` or `fpie-gui -h` to see the hint.
 
 ## Benchmark Result
 
+### Original Authors:
 ![](https://fpie.readthedocs.io/en/main/_images/benchmark.png)
 
 See [benchmark result](https://fpie.readthedocs.io/en/main/benchmark.html) and [report](https://fpie.readthedocs.io/en/main/report.html#result-and-analysis).
 
+### Brb & Msrb
+Check the main directory for reports & slides in brb_msrb_docs/
+
 ## Algorithm Detail
 
-The general idea is to keep most of gradient in source image, while matching the boundary of source image and target image pixels.
+We build upon the original repository by implementing 2 solvers:
 
-The gradient is computed by
-
-![](https://latex.codecogs.com/svg.latex?\nabla(x,y)=4I(x,y)-I(x-1,y)-I(x,y-1)-I(x+1,y)-I(x,y+1))
-
-After calculating the gradient in source image, the algorithm tries to solve the following problem: given the gradient and the boundary value, calculate the approximate solution that meets the requirement, i.e., to keep target image's gradient as similar as the source image. It can be formulated as ![](https://latex.codecogs.com/svg.latex?{(4-A)\vec{x}=\vec{b}}), where ![](https://latex.codecogs.com/svg.latex?{A\in\mathbb{R}^{N\times%20N},\vec{x}\in\mathbb{R}^N,\vec{b}\in\mathbb{R}^N}), N is the number of pixels in the mask, A is a giant sparse matrix because each line of A only contains at most 4 non-zero value (neighborhood), b is the gradient from source image, and x is the result value.
-
-N is always a large number, i.e., greater than 50k, so the Gauss-Jordan Elimination cannot be directly applied here because of the high time complexity O(N^3). People use [Jacobi Method](https://en.wikipedia.org/wiki/Jacobi_method) to solve the problem. Thanks to the sparsity of matrix A, the overall time complexity is O(MN) where M is the number of iteration performed by poisson image editing.
-
-This project parallelizes Jacobi method to speed up the computation. To our best knowledge, there's no public project on GitHub that implements poisson image editing with either OpenMP, or MPI, or CUDA. All of them can only handle a small size image workload.
+* BrbSolver: Divides workload into red and black blocks; essentially a hybrid of Equ and Grid Solver
+* MsrbSolver: Extends BrbSolver to use multiple (alpha) sweeps per iteration
 
 ### EquSolver vs GridSolver
 
@@ -126,26 +123,17 @@ GridSolver uses the same Jacobi iteration, however, it keeps the 2D structure of
 
 If the GridSolver's parameter is carefully tuned (`--grid-x` and `--grid-y`), it can always perform better than EquSolver with different backend configuration.
 
-### Gradient for PIE
+## BrbSolver
 
-Usage: `-g {max,src,avg}`
+e.g.
+```
+fpie -s test2_src.png -m test2_mask.png -t test2_tgt.png -o result2.jpg -h1 130 -w1 130 -n 11000 -g src -b openmp --method brb --tile 8 -c 6
+```
 
-The [PIE paper](https://www.cs.jhu.edu/~misha/Fall07/Papers/Perez03.pdf) states some variant of gradient calculation such as Equ. 12: using the maximum gradient to perform "mixed seamless cloning". We also provide such an option in our program:
+## MsrbSolver
 
-- `src`: only use the gradient from source image
-- `avg`: use the average gradient of source image and target image
-- `max`: use the max gradient of source and target image
+e.g.
+```
+fpie -s test2_src.png -m test2_mask.png -t test2_tgt.png -o result2.jpg -h1 130 -w1 130 -n 5000 -g src -b openmp --method msrb --tile 8 -c 6
+```
 
-The following example shows the difference between these three methods:
-
-| #    | target image                                                 | --gradient=src                                             | --gradient=avg                                             | --gradient=max                                               |
-| ---- | ------------------------------------------------------------ | ---------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
-| 3    | ![](https://github.com/cheind/poisson-image-editing/raw/master/etc/images/1/bg.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/3gsrc.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/3gavg.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/result3.jpg) |
-| 4    | ![](https://github.com/cheind/poisson-image-editing/raw/master/etc/images/2/bg.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/4gsrc.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/4gavg.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/result4.jpg) |
-| 8    | ![](https://github.com/peihaowang/PoissonImageEditing/raw/master/showcases/case3/dst.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/8gsrc.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/8gavg.jpg) | ![](https://fpie.readthedocs.io/en/main/_images/result8.jpg) |
-
-## Miscellaneous (for 15-618 course project)
-
-[Project proposal and milestone](docs/misc.md)
-
-[Final report](https://fpie.readthedocs.io/en/main/report.html) and [5min video](https://trinkle23897.github.io/images/fpie.mp4)
